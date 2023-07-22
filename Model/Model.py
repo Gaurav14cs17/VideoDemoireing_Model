@@ -63,21 +63,9 @@ class VDM_PCD(nn.Module):
                                                  res_scale=args.res_scale, use_shuffle=args.use_shuffle)
 
         # # If true, load pretrained weights trained on other demoire dataset.
-        # if pretrain:
-        #     pre_trained_dir = 'pre_trained/vdm/shuffle_49.pth'
-        #     if not self.use_shuffle:
-        #         pre_trained_dir = 'pre_trained/vdm/noshuffle_49.pth'
-        #         pre_trained_weights = torch.load(pre_trained_dir)['state_dict']
-        #         self.MainNet_V1.load_state_dict(pre_trained_weights, strict=False)
-        #         print('initialize: %s' % pre_trained_dir)
-        #
-        #     # freeze the demoireing weights
-        #     if freeze:
-        #         to_freeze_names = pre_trained_weights.keys()
-        #         for name, param in self.MainNet_V1.named_parameters():
-        #             if name in to_freeze_names:
-        #                 param.requires_grad = False
-        #         print('freeze pre-trained params')
+        if pretrain:
+            self.load_weight(freeze)
+
 
         # RGB image with 3 channels
         self.use_shuffle = True
@@ -93,15 +81,30 @@ class VDM_PCD(nn.Module):
         self.stage_layer_2 = Stage_2(self.out_ch)
 
         # aggregate/blend multi-level aligned features
-        self.conv_blend_lv1 = nn.Conv2d(args.n_feats * (args.NUM_AUX_FRAMES + 1), args.NUM_AUX_FRAMES + 1, (3, 3),
-                                        (1, 1), (1, 1), bias=True)
+        self.conv_blend_lv1 = nn.Conv2d(args.n_feats * (args.NUM_AUX_FRAMES + 1), args.NUM_AUX_FRAMES + 1, (3, 3),(1, 1), (1, 1), bias=True)
+        self.conv_blend_lv2 = nn.Conv2d(args.n_feats * (args.NUM_AUX_FRAMES + 1), args.NUM_AUX_FRAMES + 1, (3, 3),(1, 1), (1, 1), bias=True)
+        self.conv_blend_lv3 = nn.Conv2d(args.n_feats * (args.NUM_AUX_FRAMES + 1), args.NUM_AUX_FRAMES + 1, (3, 3),(1, 1), (1, 1), bias=True)
+
         self.conv_channel_lv1 = nn.Conv2d(args.n_feats, args.n_feats, (1, 1), (1, 1), 0, bias=True)
-        self.conv_blend_lv2 = nn.Conv2d(args.n_feats * (args.NUM_AUX_FRAMES + 1), args.NUM_AUX_FRAMES + 1, (3, 3),
-                                        (1, 1), (1, 1), bias=True)
         self.conv_channel_lv2 = nn.Conv2d(args.n_feats, args.n_feats, (1, 1), (1, 1), (0, 0), bias=True)
-        self.conv_blend_lv3 = nn.Conv2d(args.n_feats * (args.NUM_AUX_FRAMES + 1), args.NUM_AUX_FRAMES + 1, (3, 3),
-                                        (1, 1), (1, 1), bias=True)
         self.conv_channel_lv3 = nn.Conv2d(args.n_feats, args.n_feats, (1, 1), (1, 1), (0, 0), bias=True)
+
+
+    def load_weight(self , freeze ):
+        pre_trained_dir = 'pre_trained/vdm/shuffle_49.pth'
+        if not self.use_shuffle:
+            pre_trained_dir = 'pre_trained/vdm/noshuffle_49.pth'
+            pre_trained_weights = torch.load(pre_trained_dir)['state_dict']
+            self.MainNet_V1.load_state_dict(pre_trained_weights, strict=False)
+            print('initialize: %s' % pre_trained_dir)
+
+        # freeze the demoireing weights
+        if freeze:
+            to_freeze_names = pre_trained_weights.keys()
+            for name, param in self.MainNet_V1.named_parameters():
+                if name in to_freeze_names:
+                    param.requires_grad = False
+            print('freeze pre-trained params')
 
     def down_shuffle(self, x, r):
         b, c, h, w = x.size()
@@ -127,15 +130,9 @@ class VDM_PCD(nn.Module):
         merge_feats_lv2 = align_feats_lv2[:, 0:self.args.n_feats, :, :] * 1 / (1 + self.args.NUM_AUX_FRAMES)
         merge_feats_lv3 = align_feats_lv3[:, 0:self.args.n_feats, :, :] * 1 / (1 + self.args.NUM_AUX_FRAMES)
         for j in range(1, 1 + self.args.NUM_AUX_FRAMES):
-            merge_feats_lv1 = merge_feats_lv1 + align_feats_lv1[:,
-                                                (self.args.n_feats * j):(self.args.n_feats + self.args.n_feats * j), :,
-                                                :] * 1 / (1 + self.args.NUM_AUX_FRAMES)
-            merge_feats_lv2 = merge_feats_lv2 + align_feats_lv2[:,
-                                                (self.args.n_feats * j):(self.args.n_feats + self.args.n_feats * j), :,
-                                                :] * 1 / (1 + self.args.NUM_AUX_FRAMES)
-            merge_feats_lv3 = merge_feats_lv3 + align_feats_lv3[:,
-                                                (self.args.n_feats * j):(self.args.n_feats + self.args.n_feats * j), :,
-                                                :] * 1 / (1 + self.args.NUM_AUX_FRAMES)
+            merge_feats_lv1 = merge_feats_lv1 + align_feats_lv1[:,(self.args.n_feats * j):(self.args.n_feats + self.args.n_feats * j), :,:] * 1 / (1 + self.args.NUM_AUX_FRAMES)
+            merge_feats_lv2 = merge_feats_lv2 + align_feats_lv2[:,(self.args.n_feats * j):(self.args.n_feats + self.args.n_feats * j), :,:] * 1 / (1 + self.args.NUM_AUX_FRAMES)
+            merge_feats_lv3 = merge_feats_lv3 + align_feats_lv3[:,(self.args.n_feats * j):(self.args.n_feats + self.args.n_feats * j), :,:] * 1 / (1 + self.args.NUM_AUX_FRAMES)
         return merge_feats_lv1, merge_feats_lv2, merge_feats_lv3
 
     def blend_type1(self, align_feats_lv1, align_feats_lv2, align_feats_lv3):
