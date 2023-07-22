@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torchvision.ops import DeformConv2d
-
 '''
 DeformConv2d : https://arxiv.org/pdf/1811.11168.pdf
 '''
@@ -26,7 +25,7 @@ class Stage_3_Module(nn.Module):
         self.conv_layer_1 = nn.Conv2d(n_feats * 2, n_feats, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1),
                                       bias=True)
         self.conv_layer_2 = nn.Conv2d(n_feats, n_feats, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=True)
-        self.conv_dcnpack = DeformConv2d(in_channels=n_feats, out_channels=n_feats, kernel_size=3, stride=1, padding=1,
+        self.L3_dcnpack = DeformConv2d(in_channels=n_feats, out_channels=n_feats, kernel_size=3, stride=1, padding=1,
                                          dilation=1, groups=groups)
         self.lrelu = nn.LeakyReLU(negative_slope=0.1, inplace=True)
 
@@ -45,8 +44,8 @@ class Stage_2_Module(nn.Module):
                                          bias=True)
         self.L2_offset_conv2 = nn.Conv2d(n_feats * 2, n_feats, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1),
                                          bias=True)
-        self.L2_offset_conv3 = nn.Conv2d(n_feats * 2, n_feats, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1),
-                                         bias=True)
+        self.L2_offset_conv3 = nn.Conv2d(n_feats, n_feats, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1),bias=True)
+
         self.L2_dcnpack = DeformConv2d(n_feats, n_feats, 3, stride=1, padding=1, dilation=1, groups=groups)
         self.L2_fea_conv = nn.Conv2d(n_feats * 2, n_feats, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=True)
         self.lrelu = nn.LeakyReLU(negative_slope=0.1, inplace=True)
@@ -61,6 +60,7 @@ class Stage_2_Module(nn.Module):
         return offset, output_fea
 
     def forward(self, x, y, prev_offset, prev_stage_fea):
+        prev_offset = self.up_scale(prev_offset)
         offset, output_fea = self.stage_forward(x, y, prev_offset)
         prev_stage_fea = self.up_scale(prev_stage_fea)
         output_fea = self.lrelu(self.L2_fea_conv(torch.cat([output_fea, prev_stage_fea], dim=1)))
@@ -74,7 +74,7 @@ class Stage_1_Module(nn.Module):
                                          bias=True)
         self.L1_offset_conv2 = nn.Conv2d(n_feats * 2, n_feats, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1),
                                          bias=True)
-        self.L1_offset_conv3 = nn.Conv2d(n_feats * 2, n_feats, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1),
+        self.L1_offset_conv3 = nn.Conv2d(n_feats, n_feats, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1),
                                          bias=True)
         self.L1_dcnpack = DeformConv2d(n_feats, n_feats, 3, stride=1, padding=1, dilation=1, groups=groups)
         self.L1_fea_conv = nn.Conv2d(n_feats * 2, n_feats, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=True)
@@ -94,12 +94,12 @@ class Stage_1_Module(nn.Module):
         offset, output_fea = self.stage_forward(x, y, prev_offset)
 
         prev_stage_fea = self.up_scale(prev_stage_fea)
-        output_fea = self.lrelu(self.L2_fea_conv(torch.cat([output_fea, prev_stage_fea], dim=1)))
+        output_fea = self.lrelu(self.L1_fea_conv(torch.cat([output_fea, prev_stage_fea], dim=1)))
         return offset, output_fea
 
 
 class PcdAlign(nn.Module):
-    def __init__(self, n_feats=64, groups=8, wn=None):
+    def __init__(self, n_feats=18, groups=3, wn=None):
         super(PcdAlign, self).__init__()
         self.stage_3 = Stage_3_Module(n_feats , groups)
         self.stage_2 = Stage_2_Module(n_feats , groups)
@@ -121,3 +121,19 @@ class PcdAlign(nn.Module):
         offset = self.lrelu(self.cas_offset_conv2(offset))
         L1_fea = self.lrelu(self.cas_dcnpack(output_L_fea_1, offset))
         return L1_fea
+
+
+
+
+if __name__ == '__main__':
+    new_model = PcdAlign()
+    in_image = [torch.randn(3,18 ,16 , 16) , torch.randn(3, 18 , 8 ,8) , torch.randn(3, 18 , 4 , 4)]
+    gt_image = [torch.randn(3,18 ,16 , 16) , torch.randn(3, 18 , 8 ,8) , torch.randn(3, 18 , 4 , 4)]
+    new_output = new_model(in_image,gt_image)
+
+
+    # groups =  1
+    # model_obj = DCN(64, 64, 7, stride=1, padding=1, dilation=1, groups=groups)
+    # image =  torch.randn( 3  , 64 , 32 , 32)
+    # offset = torch.randn(3 ,  98 , 32 , 32)
+    # print(model_obj(image, offset).shape)
