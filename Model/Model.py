@@ -97,10 +97,11 @@ class VDM_PCD(nn.Module):
             ref_tmp = ref[:, (0 + 3 * i):(3 + 3 * i), :, :]
             if self.use_shuffle:
                 ref_tmp = self.down_shuffle(ref_tmp, 2)
-                ref_feats, T_lv1, T_lv2, T_lv3 = self.stage_layer_2(ref_tmp)
-                align_feats_lv1 = torch.cat((align_feats_lv1, T_lv1), dim=1)
-                align_feats_lv2 = torch.cat((align_feats_lv2, T_lv2), dim=1)
-                align_feats_lv3 = torch.cat((align_feats_lv3, T_lv3), dim=1)
+
+            ref_feats, T_lv1, T_lv2, T_lv3 = self.stage_layer_2(ref_tmp)
+            align_feats_lv1 = torch.cat((align_feats_lv1, T_lv1), dim=1)
+            align_feats_lv2 = torch.cat((align_feats_lv2, T_lv2), dim=1)
+            align_feats_lv3 = torch.cat((align_feats_lv3, T_lv3), dim=1)
 
 
 
