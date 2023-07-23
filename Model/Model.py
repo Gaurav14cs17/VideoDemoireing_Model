@@ -97,14 +97,13 @@ class VDM_PCD(nn.Module):
             pre_trained_weights = torch.load(pre_trained_dir)['state_dict']
             self.MainNet_V1.load_state_dict(pre_trained_weights, strict=False)
             print('initialize: %s' % pre_trained_dir)
-
-        # freeze the demoireing weights
-        if freeze:
-            to_freeze_names = pre_trained_weights.keys()
-            for name, param in self.MainNet_V1.named_parameters():
-                if name in to_freeze_names:
-                    param.requires_grad = False
-            print('freeze pre-trained params')
+            # freeze the demoireing weights
+            if freeze:
+                to_freeze_names = pre_trained_weights.keys()
+                for name, param in self.MainNet_V1.named_parameters():
+                    if name in to_freeze_names:
+                        param.requires_grad = False
+                print('freeze pre-trained params')
 
     def down_shuffle(self, x, r):
         b, c, h, w = x.size()
