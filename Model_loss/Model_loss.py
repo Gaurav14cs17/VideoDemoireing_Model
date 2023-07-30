@@ -4,6 +4,10 @@ import torch.nn.functional as F
 import torch
 import torchvision
 
+'''
+DISTS_Loss : https://github.com/dingkeyan93/DISTS/blob/master/DISTS_pytorch/DISTS_pt.py
+'''
+
 
 class VGG_Perceptual_Loss(torch.nn.Module):
     def __init__(self, resize=True):
