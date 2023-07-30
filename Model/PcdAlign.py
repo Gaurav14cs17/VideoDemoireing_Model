@@ -99,7 +99,6 @@ class Stage_1_Module(nn.Module):
 
 '''
 
-
 Paper : https://arxiv.org/pdf/2204.08332.pdf
 Github : https://github.com/Algolzw/EBSR/tree/main
 
@@ -108,6 +107,7 @@ Referance Paper :
 2) Optical Flow Estimation using a Spatial Pyramid Network (https://arxiv.org/pdf/1611.00850.pdf)
 3) UnFlow: Unsupervised Learning of Optical Flow with a Bidirectional Census Loss (https://arxiv.org/pdf/1711.07837.pdf)
 4) LiteFlowNet: A Lightweight Convolutional Neural Network for Optical Flow Estimation (https://arxiv.org/pdf/1805.07036.pdf)
+
 '''
 
 
