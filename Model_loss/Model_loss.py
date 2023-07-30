@@ -81,8 +81,9 @@ class VGG_Perceptual_Loss(torch.nn.Module):
 
 
 
-
-
+'''
+Single_Perceptual_loss
+'''
 class single_VGGPerceptualLoss(torch.nn.Module):
     def __init__(self, lam_p=1.0, lam_l=0.5):
         super(single_VGGPerceptualLoss, self).__init__()
@@ -96,3 +97,35 @@ class single_VGGPerceptualLoss(torch.nn.Module):
         else:
             loss = self.lam_p*self.loss_fn(out, gt, feature_layers=feature_layers) + self.lam_l*F.l1_loss(out, gt)
         return loss
+
+
+'''
+Multi Perceptual_loss
+'''
+
+
+class multi_VGGPerceptualLoss(torch.nn.Module):
+    def __init__(self, lam_p=1.0, lam_l=0.5):
+        super(multi_VGGPerceptualLoss, self).__init__()
+        self.loss_fn = VGG_Perceptual_Loss()
+        self.lam_p = lam_p
+        self.lam_l = lam_l
+
+    def get_resize_image(self , image , scale_factor ):
+        return F.interpolate(image, scale_factor=scale_factor, mode='bilinear', align_corners=False)
+
+
+    def forward(self, out3, out2, out1, gt1, feature_layers=[2], mask=None):
+        gt2 = self.get_resize_image(gt1, scale_factor=0.5)
+        gt3 = self.get_resize_image(gt1, scale_factor=0.25)
+        if mask is not None:
+            mask2 = self.get_resize_image(mask, scale_factor=0.5)
+            mask3 = self.get_resize_image(mask, scale_factor=0.25)
+            loss1 = self.lam_p*self.loss_fn(out1, gt1, feature_layers=feature_layers, mask=mask) + self.lam_l*F.l1_loss(out1*mask, gt1*mask)
+            loss2 = self.lam_p*self.loss_fn(out2, gt2, feature_layers=feature_layers, mask=mask2) + self.lam_l*F.l1_loss(out2*mask2, gt2*mask2)
+            loss3 = self.lam_p*self.loss_fn(out3, gt3, feature_layers=feature_layers, mask=mask3) + self.lam_l*F.l1_loss(out3*mask3, gt3*mask3)
+        else:
+            loss1 = self.lam_p*self.loss_fn(out1, gt1, feature_layers=feature_layers) + self.lam_l*F.l1_loss(out1, gt1)
+            loss2 = self.lam_p*self.loss_fn(out2, gt2, feature_layers=feature_layers) + self.lam_l*F.l1_loss(out2, gt2)
+            loss3 = self.lam_p*self.loss_fn(out3, gt3, feature_layers=feature_layers) + self.lam_l*F.l1_loss(out3, gt3)
+        return loss1+loss2+loss3
