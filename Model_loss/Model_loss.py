@@ -21,12 +21,12 @@ class VGG_Perceptual_Loss(torch.nn.Module):
             for fea in blk:
                 fea.requires_grad = False
 
-        self.blocks = torch.nn.ModuleList(self.blocks)
+        self.blocks = nn.ModuleList(self.blocks)
 
-        self.transform = torch.nn.functional.interpolate
+        self.transform = nn.functional.interpolate
 
-        self.mean = torch.nn.Parameter(torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1))
-        self.std = torch.nn.Parameter(torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1))
+        self.mean = nn.Parameter(torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1))
+        self.std = nn.Parameter(torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1))
         self.resize = resize
 
     def get_resize(self, inputs, target):
@@ -77,4 +77,22 @@ class VGG_Perceptual_Loss(torch.nn.Module):
                 gram_x = act_x @ act_x.permute(0, 2, 1)
                 gram_y = act_y @ act_y.permute(0, 2, 1)
                 loss += torch.nn.functional.l1_loss(gram_x, gram_y)
+        return loss
+
+
+
+
+
+class single_VGGPerceptualLoss(torch.nn.Module):
+    def __init__(self, lam_p=1.0, lam_l=0.5):
+        super(single_VGGPerceptualLoss, self).__init__()
+        self.loss_fn = VGG_Perceptual_Loss()
+        self.lam_p = lam_p
+        self.lam_l = lam_l
+
+    def forward(self, out, gt, feature_layers=[2], mask=None):
+        if mask is not None:
+            loss = self.lam_p*self.loss_fn(out, gt, feature_layers=feature_layers, mask=mask) + self.lam_l*F.l1_loss(out*mask, gt*mask)
+        else:
+            loss = self.lam_p*self.loss_fn(out, gt, feature_layers=feature_layers) + self.lam_l*F.l1_loss(out, gt)
         return loss
